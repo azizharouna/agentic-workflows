@@ -1,0 +1,12 @@
+# Create a .gitignore file (prevents committing unwanted files)
+@"
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+
+# IDE
+.vscode/
+.idea/
+"@ | Out-File -FilePath .gitignore -Encoding utf8
