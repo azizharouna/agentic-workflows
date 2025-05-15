@@ -12,3 +12,7 @@ __pycache__/
 *.egg-info/
 *.egg
 egg/
+
+
+
+agent_memory.db
