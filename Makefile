@@ -9,6 +9,7 @@ test:
 
 format:
 	black agents/ tests/
+	isort agents/ tests/
 
 lint:
 	flake8 agents/ tests/
