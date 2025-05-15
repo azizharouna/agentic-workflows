@@ -16,3 +16,7 @@ def test_support_agent_fails_on_invalid_output():
     # Force an invalid response (should raise ValidationError)
     with pytest.raises(ValidationError):
         AgentResponse(response=123, confidence="high")  # Types are wrong!
+
+def test_agent_handles_refunds():
+    result = support_agent("How do I get a refund?")
+    assert result.action == "redirect"
