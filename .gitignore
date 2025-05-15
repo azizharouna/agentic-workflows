@@ -1,12 +1,14 @@
-# Create a .gitignore file (prevents committing unwanted files)
-@"
 # Python
 __pycache__/
 *.pyc
 .env
-venv/
+.venv/
 
 # IDE
 .vscode/
 .idea/
-"@ | Out-File -FilePath .gitignore -Encoding utf8
+
+# Python egg directories
+*.egg-info/
+*.egg
+egg/

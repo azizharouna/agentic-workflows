@@ -1,0 +1,14 @@
+# Auto-detect text files and normalize to LF in repo
+* text=auto
+
+# Explicitly declare text files that should be LF
+*.py text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Declare binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
