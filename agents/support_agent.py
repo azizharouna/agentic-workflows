@@ -6,6 +6,7 @@ from typing import Literal
 
 load_dotenv()  # Load .env file
 
+
 class AgentResponse(BaseModel):
     response: str
     confidence: float = Field(ge=0, le=1)
@@ -25,15 +26,20 @@ async def query_deepseek(prompt: str) -> str:
         return response.json()["choices"][0]["message"]["content"]
 
 async def support_agent(query: str) -> AgentResponse:
-    """Enhanced agent with real LLM integration"""
-    llm_response = await query_deepseek(f"Customer query: {query}")
-    
-    return AgentResponse(
-        response=llm_response,
-        confidence=0.9 if "refund" in query.lower() else 0.7,
-        action="redirect" if "refund" in query.lower() else "respond"
-    )
-
+    """Ensure we always return AgentResponse"""
+    try:
+        llm_response = await query_deepseek(f"Customer query: {query}")
+        return AgentResponse(
+            response=llm_response,
+            confidence=0.9 if "refund" in query.lower() else 0.7,
+            action="redirect" if "refund" in query.lower() else "respond"
+        )
+    except Exception as e:
+        return AgentResponse(  # Fallback response
+            response=f"Error: {str(e)}",
+            confidence=0.1,
+            action="escalate"
+        )
 
 # Test
 if __name__ == "__main__":
