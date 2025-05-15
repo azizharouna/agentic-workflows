@@ -3,14 +3,22 @@ from pydantic import BaseModel
 # Defining the output schema
 class AgentResponse(BaseModel):
     response: str
-    confidence: float  # Pydantic enforces float type 
+    confidence: float = Field(ge=0, le=1)  # Enforces 0-1 range
+    action: Literal["redirect", "respond", "escalate"]  # New constrained field
 
 # Agent logic
 def support_agent(query: str) -> AgentResponse:
-    """Simulate an agent with validated output."""
+    """Improved agent with decision logic."""
+    if "refund" in query.lower():
+        return AgentResponse(
+            response="Please visit our refund portal at...",
+            confidence=0.9,
+            action="redirect"
+        )
     return AgentResponse(
-        response="I recommend checking our FAQ section.",
-        confidence=0.8  # Try changing to "high" to see Pydantic error!
+        response="I'll help with that.",
+        confidence=0.7,
+        action="respond"
     )
 
 # Test
