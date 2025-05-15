@@ -2,7 +2,22 @@
 
 🚀 **Production-ready AI agent system** featuring structured outputs, rate-limited API calls, and persistent memory. Built for reliability and extensibility.
 
-## Key Features
+## ✨ Features
+
+- **Structured Output Validation**
+  - Pydantic-enforced response schemas
+  - Confidence scoring (0-100%)
+  - Action routing (redirect/respond/escalate)
+
+- **Resilient API Integration**
+  - Automatic rate limiting (5 calls/sec)
+  - Exponential backoff retries
+  - Configurable timeouts
+
+- **Contextual Memory**
+  - SQLite-backed conversation history
+  - Session-based memory isolation
+  - Configurable context window
 
 - **Structured Outputs**  
   Pydantic-validated responses with confidence scoring and action routing
@@ -26,6 +41,8 @@ agentic-workflows/
 ```  
 
 ---
+
+
 
 ### **⚡ Quick Start**  
 1. **Install dependencies**:  
