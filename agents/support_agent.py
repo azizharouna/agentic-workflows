@@ -5,15 +5,21 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 load_dotenv()  # Load .env file
+from utils.rate_limiter import RateLimiter
 
+# Global rate limiter (5 calls/second)
+DEEPSEEK_LIMITER = RateLimiter(max_calls=5, period=1.0)
 
 class AgentResponse(BaseModel):
     response: str
     confidence: float = Field(ge=0, le=1)
     action: Literal["redirect", "respond", "escalate"]
 
+
 async def query_deepseek(prompt: str) -> str:
-    """Make async API call to DeepSeek"""
+    """Rate-limited API call Make async API call to DeepSeek"""
+    await DEEPSEEK_LIMITER.wait()  # ← Blocks if over limit
+    
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://api.deepseek.com/v1/chat/completions",
