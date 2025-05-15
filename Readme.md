@@ -1,5 +1,16 @@
-## **🚀 Agentic Workflows with Pydantic & LLMs**  
-**A modular Python framework for building validated AI agents.**  
+# Agentic Workflows with LLMs
+
+🚀 **Production-ready AI agent system** featuring structured outputs, rate-limited API calls, and persistent memory. Built for reliability and extensibility.
+
+## Key Features
+
+- **Structured Outputs**  
+  Pydantic-validated responses with confidence scoring and action routing
+  ```python
+  class AgentResponse(BaseModel):
+      response: str
+      confidence: float = Field(ge=0, le=1)  # 0-100%
+      action: Literal["redirect", "respond", "escalate"] 
 
 ### **📂 Project Structure**  
 ```
