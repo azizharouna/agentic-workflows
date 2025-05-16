@@ -33,7 +33,7 @@ class GeneralAgent:
     def __init__(self, persona_dir: str = "personas"):
         self.persona_dir = Path(persona_dir)
         self.current_role: Optional[RoleConfig] = None
-        self.memory = AgentMemory()
+        self.memory = AgentMemory(session_id=session_id)  
         
     async def assign_role(self, scenario: str, persona_name: str):
         """Load role from YAML file"""
