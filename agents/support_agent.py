@@ -16,55 +16,68 @@ class AgentResponse(BaseModel):
     action: Literal["redirect", "respond", "escalate"]
 
 
-async def query_deepseek(prompt: str, timeout: float = 30.0) -> str:
-    """Enhanced with timeout and retries"""
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {os.getenv('DEEPSEEK_API_KEY')}"},
-                json={
-                    "model": "deepseek-chat",
-                    "messages": [{"role": "user", "content": prompt}]
-                }
-            )
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
-            
-    except httpx.ReadTimeout:
-        raise ValueError("API timeout - consider reducing prompt size or increasing timeout")
-    except Exception as e:
-        raise ValueError(f"API error: {str(e)}")
+
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import httpx
+
+# Retry wrapper with exponential backoff
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type((httpx.TimeoutException, httpx.NetworkError))
+)
+async def query_deepseek(prompt: str) -> str:
+    """Robust API call with timeout and retry"""
+    timeout = httpx.Timeout(30.0, connect=10.0)  # 30s read, 10s connect
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            "https://api.deepseek.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {os.getenv('DEEPSEEK_API_KEY')}"},
+            json={
+                "model": "deepseek-chat",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 500
+            }
+        )
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
 
 from agents.memory import AgentMemory
 
 async def support_agent(query: str, session_id: str = "default") -> AgentResponse:
     memory = AgentMemory(session_id)
-    
+
     # Store user message
     memory.add_message("user", query)
-    
+
     # Get conversation context
     context = memory.get_context()
     full_prompt = f"""
     Conversation history:
     {context}
-    
+
     New query: {query}
     """
-    
-    # Generate response
-    llm_response = await query_deepseek(full_prompt)
-    
+
+    try:
+        # Generate response
+        llm_response = await query_deepseek(full_prompt)
+    except (httpx.ReadTimeout, httpx.TimeoutException):
+        raise ValueError("API timeout")
+
     # Store agent response
     memory.add_message("agent", llm_response)
-    
+
     return AgentResponse(
         response=llm_response,
         confidence=0.9 if "refund" in query.lower() else 0.7,
         action="redirect" if "refund" in query.lower() else "respond"
     )
 
-# Test
+
+# Test usage
 if __name__ == "__main__":
-    print(support_agent("How do I reset my password?"))
+    import asyncio
+
+    result = asyncio.run(support_agent("How do I reset my password?"))
+    print(result)
