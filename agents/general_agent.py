@@ -30,7 +30,7 @@ class AgentResponse(BaseModel):
 DEEPSEEK_LIMITER = RateLimiter(max_calls=5, period=1.0)
 
 class GeneralAgent:
-    def __init__(self, persona_dir: str = "personas"):
+    def __init__(self, persona_dir: str = "personas", session_id: str = "default"):
         self.persona_dir = Path(persona_dir)
         self.current_role: Optional[RoleConfig] = None
         self.memory = AgentMemory(session_id=session_id)  
