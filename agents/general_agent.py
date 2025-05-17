@@ -37,23 +37,29 @@ class AgentResponse(BaseModel):
 DEEPSEEK_LIMITER = RateLimiter(max_calls=5, period=1.0)
 
 class GeneralAgent:
-    def __init__(self, persona_dir: str = "personas", session_id: str = None):
+    def __init__(self, persona_dir: str = "personas", conversation_id: str = None, agent_id: str = None):
         """
         Args:
             persona_dir: Directory containing persona YAML files
-            session_id: Conversation session identifier
+            conversation_id: Shared conversation identifier
+            agent_id: Unique identifier for this agent instance
         """
         self.persona_dir = Path(persona_dir)
         self.current_role: Optional[RoleConfig] = None
-        self.memory = AgentMemory(session_id=session_id)
+        self.agent_id = agent_id or str(uuid.uuid4())
+        self.memory = AgentMemory(
+            session_id=f"{conversation_id or str(uuid.uuid4())}_{self.agent_id}"
+        )
         self.conversation_history: List[Tuple[str, str]] = []  # (speaker, message)
     
-    async def new_session(self, session_id: str = None):
-        """Initialize new conversation session"""
+    async def new_session(self, session_id: str = None, reuse_existing: bool = True):
+        """Initialize or reuse conversation session"""
         self.memory = AgentMemory(session_id=session_id)
+        await self.memory.initialize_db()  # Wait for initialization
         self.conversation_history = []
+        return self.memory.session_id
     
-    async def assign_role(self, scenario: str, persona_name: str):
+    async def assign_role(self, scenario: str, persona_name: str) -> bool:
         """Load and validate role configuration"""
         filepath = self.persona_dir / f"{scenario}_{persona_name}.yaml"
         if not filepath.exists():
@@ -64,10 +70,18 @@ class GeneralAgent:
             self.current_role = RoleConfig(**data)
         
         # Initialize memory with role context
-        await self.memory.add_message(
-            "system", 
-            f"Role initialized: {self.current_role.role_type}"
-        )
+        try:
+            await self.memory.add_message(
+                "system",
+                f"Role initialized: {self.current_role.role_type}"
+            )
+        except Exception as e:
+            await self.new_session()  # Create fresh session if failed
+            await self.memory.add_message(
+                "system",
+                f"Role initialized (new session): {self.current_role.role_type}"
+            )
+        return True
     
     @retry(
         stop=stop_after_attempt(3),
@@ -148,8 +162,8 @@ class GeneralAgent:
         
         # Reconstruct message flow with proper roles
         for msg in recent_messages:
-            role = "user" if msg.role != self.current_role.role_type else "assistant"
-            messages.append({"role": role, "content": msg.content})
+            role = "user" if msg["role"] != self.current_role.role_type else "assistant"
+            messages.append({"role": role, "content": msg["content"]})
         
         return messages
     

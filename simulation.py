@@ -11,17 +11,21 @@ class ConversationCLI:
         self.session_id = str(uuid.uuid4())
         self.agent1: Optional[GeneralAgent] = None
         self.agent2: Optional[GeneralAgent] = None
+        self.max_turns = 20  # Maximum conversation exchanges
+        self.termination_confidence = 0.9  # Confidence threshold for closure
     
     async def initialize_agents(self, scenario: str, role1: str, role2: str):
         """Initialize both agents with their roles"""
         # Initialize agents with default memory
         self.agent1 = GeneralAgent(
             persona_dir=self.persona_dir,
-            session_id=self.session_id
+            conversation_id=self.session_id,
+            agent_id=f"agent1_{role1}"
         )
         self.agent2 = GeneralAgent(
             persona_dir=self.persona_dir,
-            session_id=self.session_id
+            conversation_id=self.session_id,
+            agent_id=f"agent2_{role2}"
         )
         
         await asyncio.gather(
@@ -58,9 +62,14 @@ class ConversationCLI:
             current_message = response.response
             current_speaker, other_speaker = other_speaker, current_speaker
             
-            # Check for exit condition
-            if self._should_exit(current_message):
-                print("\n💬 Conversation ended by user")
+            # Check for exit conditions
+            turn_count += 1
+            if (self._should_exit(current_message) or
+                turn_count >= self.max_turns or
+                response.confidence >= self.termination_confidence):
+                print(f"\n💬 Conversation ended after {turn_count} turns")
+                if response.confidence >= self.termination_confidence:
+                    print("✅ Natural conclusion reached")
                 break
     
     def _print_response(self, speaker: str, response: str, confidence: float, emotion: str):
