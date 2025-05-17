@@ -22,6 +22,6 @@ class PersonaDB:
             raise FileNotFoundError(f"No persona {name} for {scenario}")
         return yaml.safe_load(filepath.read_text())
 
-# Example Usage:
-db = PersonaDB()
-db.save(support_persona, "late_delivery")
+# Example Usage (commented out):
+# db = PersonaDB()
+# db.save(support_persona, "late_delivery")
