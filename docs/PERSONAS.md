@@ -33,9 +33,16 @@ instructions: |
 ## Creating New Personas
 1. Copy an existing YAML file
 2. Modify traits/actions
-3. Test with:
+3. Include required fields:
+   - `instructions`: Primary behavior guidance
+   - `scenario_instructions`: Specific prompts for scenario phases
+4. Test with:
 ```python
-await agent.assign_role("scenario_name", "new_persona")
+from agents.general_agent import GeneralAgent
+
+agent = GeneralAgent(session_id="test")
+result = await agent.assign_role("scenario_name", "new_persona.yaml")
+assert result.role_type == "your_role_type"  # Verify assignment
 ```
 
 ## Existing Personas

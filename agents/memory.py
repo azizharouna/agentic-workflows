@@ -1,33 +1,56 @@
 import json
-from sqlalchemy import create_engine, Column, String, Text
+from sqlalchemy import create_engine, Column, String, Text, DateTime, func
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 from typing import List, Dict
+import os
 
 Base = declarative_base()
-engine = create_engine("sqlite:///agent_memory.db")
-Session = sessionmaker(bind=engine)
 
 class Conversation(Base):
     __tablename__ = "conversations"
     
     session_id = Column(String(36), primary_key=True)
-    history = Column(Text)  # JSON-serialized list of messages
-    last_updated = Column(String(20))
+    history = Column(Text)
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    size_kb = Column(String(10))
 
     def get_history(self) -> List[Dict]:
         return json.loads(self.history or "[]")
 
-# Initialize DB
-Base.metadata.create_all(engine)
-
 class AgentMemory:
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, max_sessions=1000, max_storage_mb=100):
         self.session_id = session_id
+        self.max_sessions = max_sessions
+        self.max_storage_mb = max_storage_mb
+        self.db_path = "agent_memory.db"
+        self.engine = create_engine(f"sqlite:///{self.db_path}")
+        Session = sessionmaker(bind=self.engine)
         self.db = Session()
+        Base.metadata.create_all(self.engine)
+
+    def _calculate_size(self):
+        return os.path.getsize(self.db_path) / 1024 / 1024
+
+    def _prune_sessions(self):
+        # Size-based pruning
+        if self._calculate_size() > self.max_storage_mb:
+            oldest = self.db.query(Conversation).order_by(
+                Conversation.last_updated).first()
+            self.db.delete(oldest)
         
+        # Count-based pruning
+        session_count = self.db.query(Conversation).count()
+        if session_count > self.max_sessions:
+            to_remove = session_count - self.max_sessions
+            oldest = self.db.query(Conversation).order_by(
+                Conversation.last_updated).limit(to_remove).all()
+            for session in oldest:
+                self.db.delete(session)
+        
+        self.db.commit()
+
     def add_message(self, role: str, content: str):
-        """Store user/agent messages"""
         conv = self.db.get(Conversation, self.session_id) or Conversation(
             session_id=self.session_id,
             history="[]"
@@ -41,18 +64,9 @@ class AgentMemory:
         })
         
         conv.history = json.dumps(history)
-        conv.last_updated = str(datetime.now())
+        conv.last_updated = datetime.utcnow()
+        conv.size_kb = f"{len(conv.history) / 1024:.2f}"
+        
         self.db.add(conv)
         self.db.commit()
-
-    def get_context(self, max_messages=5) -> str:
-        """Retrieve recent history as context string"""
-        conv = self.db.get(Conversation, self.session_id)
-        if not conv:
-            return ""
-            
-        history = conv.get_history()[-max_messages:]
-        return "\n".join(
-            f"{msg['role']}: {msg['content']}" 
-            for msg in history
-        )
+        self._prune_sessions()

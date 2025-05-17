@@ -92,12 +92,15 @@ def support_agent(query: str) -> AgentResponse:
 
 ---
 
-### **🧪 Testing**  
-We verify:  
-1. **Valid outputs** match the schema  
-2. **Invalid data** fails fast  
+### **🧪 Testing**
+We verify:
+1. **Valid outputs** match the schema
+2. **Invalid data** fails fast
+3. **Persona traits** are properly applied
+
 ```bash
-pytest tests/ -v  # Run tests
+# Run persona-specific tests
+pytest tests/unit/test_personas.py -v
 ```
 
 ---
