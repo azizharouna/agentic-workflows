@@ -16,4 +16,5 @@ egg/
 
 
 agent_memory.db
+agent_memory.db.bak
 docs/MEMORY_AND_TESTING_REVIEW.md

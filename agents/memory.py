@@ -29,6 +29,18 @@ class AgentMemory:
         self.db = Session()
         Base.metadata.create_all(self.engine)
 
+    def get_context(self) -> str:
+        """Returns formatted conversation history"""
+        conv = self.db.get(Conversation, self.session_id)
+        if not conv:
+            return "No conversation history"
+            
+        history = conv.get_history()
+        return "\n".join(
+            f"{msg['role']}: {msg['content']}"
+            for msg in history
+        )
+
     def _calculate_size(self):
         return os.path.getsize(self.db_path) / 1024 / 1024
 
