@@ -62,8 +62,8 @@ class AgentMemory:
         
         self.db.commit()
 
-    def add_message(self, role: str, content: str):
-        conv = self.db.get(Conversation, self.session_id) or Conversation(
+    async def add_message(self, role: str, content: str):
+        conv = await self.db.get(Conversation, self.session_id) or Conversation(
             session_id=self.session_id,
             history="[]"
         )
@@ -80,5 +80,5 @@ class AgentMemory:
         conv.size_kb = f"{len(conv.history) / 1024:.2f}"
         
         self.db.add(conv)
-        self.db.commit()
-        self._prune_sessions()
+        await self.db.commit()
+        await self._prune_sessions()
