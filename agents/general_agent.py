@@ -8,6 +8,7 @@ import yaml
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from utils.rate_limiter import RateLimiter
 from agents.memory import AgentMemory
+from .schemas import RoleConfig  # The existing Pydantic model
 
 load_dotenv()
 
@@ -30,10 +31,18 @@ class AgentResponse(BaseModel):
 DEEPSEEK_LIMITER = RateLimiter(max_calls=5, period=1.0)
 
 class GeneralAgent:
-    def __init__(self, persona_dir: str = "personas", session_id: str = "default"):
+    def __init__(self, persona_dir: str = "personas", session_id: str = None):
+        """
+        Args:
+            session_id: Optional custom ID. Auto-generates UUID if None.
+        """
         self.persona_dir = Path(persona_dir)
         self.current_role: Optional[RoleConfig] = None
-        self.memory = AgentMemory(session_id=session_id)  
+        self.memory = AgentMemory(session_id=session_id)  # Auto-validates
+    
+    async def new_session(self):
+        """Start fresh conversation with new ID"""
+        self.memory = AgentMemory()  # Auto-generates new UUID
         
     async def assign_role(self, scenario: str, persona_name: str):
         """Load role from YAML file"""
@@ -74,11 +83,7 @@ class GeneralAgent:
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]
     
-    async def execute(
-        self, 
-        query: str, 
-        session_id: str = "default"
-    ) -> AgentResponse:
+    async def execute(self, query: str, session_id: str = "default") -> AgentResponse:
         """Handle any role with memory"""
         self.memory.session_id = session_id
         self.memory.add_message("user", query)
