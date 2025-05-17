@@ -27,18 +27,24 @@
       confidence: float = Field(ge=0, le=1)  # 0-100%
       action: Literal["redirect", "respond", "escalate"] 
 
-### **📂 Project Structure**  
+### **📂 Project Structure**
 ```
-agentic-workflows/  
-├── agents/               # AI agent implementations  
-│   └── support_agent.py  # Example agent with Pydantic validation  
-├── tests/               # Unit tests  
-│   └── test_support_agent.py  
-├── schemas/             # Pydantic models  
-│   └── responses.py     # Output validation schemas  
-├── requirements.txt     # Dependencies  
-└── README.md            # This file  
-```  
+agentic-workflows/
+├── agents/               # Core agent implementations
+│   ├── general_agent.py  # Main agent with persona support
+│   └── support_agent.py  # Specialized agent
+├── docs/                # Comprehensive documentation
+│   ├── ARCHITECTURE.md
+│   ├── WORKFLOWS.md
+│   └── QUALITY_IMPROVEMENT.md
+├── personas/            # Behavior configurations
+│   └── *.yaml
+├── tests/               # Test suites
+│   ├── unit/
+│   └── integration/
+├── requirements.txt     # Dependencies
+└── README.md            
+```
 
 ---
 
@@ -63,7 +69,7 @@ agentic-workflows/
 
 ### **🔍 Key Features**  
 ✅ **Structured Outputs**: Pydantic enforces type-safe responses  
-✅ **Tested**: 100% test coverage (expand with `pytest --cov`)  
+✅ **Tested**: Core functionality covered (see [QUALITY.md](docs/QUALITY_IMPROVEMENT.md))
 ✅ **Modular**: Easy to add new agents (just drop a new `.py` file in `agents/`)  
 
 ---
@@ -97,9 +103,10 @@ pytest tests/ -v  # Run tests
 ---
 
 ### **📈 Next Steps**  
-- [ ] Add Shopify API integration  
-- [ ] Build a multi-agent workflow  
-- [ ] Set up CI/CD (GitHub Actions)  
+- [x] Add persona system ([docs](docs/PERSONAS.md))
+- [ ] Improve test coverage ([plan](docs/QUALITY_IMPROVEMENT.md))
+- [ ] Add production monitoring
+- [ ] Complete CI/CD pipeline
 
 ---
 
