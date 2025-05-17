@@ -45,19 +45,23 @@ class AgentMemory:
     def _calculate_size(self):
         return os.path.getsize(self.db_path) / 1024 / 1024
 
-    def _prune_sessions(self):
+    async def _prune_sessions(self, session):
         # Size-based pruning
         if self._calculate_size() > self.max_storage_mb:
-            oldest = self.db.query(Conversation).order_by(
-                Conversation.last_updated).first()
-            self.db.delete(oldest)
+            oldest = await session.execute(
+                session.query(Conversation).order_by(Conversation.last_updated).limit(1)
+            )
+            await session.delete(oldest.scalar())
         
         # Count-based pruning
-        session_count = self.db.query(Conversation).count()
-        if session_count > self.max_sessions:
-            to_remove = session_count - self.max_sessions
-            oldest = self.db.query(Conversation).order_by(
-                Conversation.last_updated).limit(to_remove).all()
+        session_count = await session.execute(
+            session.query(Conversation).count()
+        )
+        if session_count.scalar() > self.max_sessions:
+            to_remove = session_count.scalar() - self.max_sessions
+            oldest = await session.execute(
+                session.query(Conversation).order_by(Conversation.last_updated).limit(to_remove)
+            )
             for session in oldest:
                 self.db.delete(session)
         
@@ -65,20 +69,25 @@ class AgentMemory:
 
     async def add_message(self, role: str, content: str):
         async with self.async_session() as session:
-            conv = await session.get(Conversation, self.session_id) or Conversation(
-                session_id=self.session_id,
-                history="[]"
-            )
-            
-            history = conv.get_history()
-            history.append({
-                "role": role,
-                "content": content,
-                "timestamp": str(datetime.now())
-            })
-            
-            conv.history = json.dumps(history)
-            conv.last_updated = datetime.utcnow()
+            async with session.begin():
+                conv = await session.get(Conversation, self.session_id) or Conversation(
+                    session_id=self.session_id,
+                    history="[]"
+                )
+                
+                history = conv.get_history()
+                history.append({
+                    "role": role,
+                    "content": content,
+                    "timestamp": str(datetime.now())
+                })
+                
+                conv.history = json.dumps(history)
+                conv.last_updated = datetime.utcnow()
+                conv.size_kb = f"{len(conv.history) / 1024:.2f}"
+                
+                session.add(conv)
+                await self._prune_sessions(session)
             conv.size_kb = f"{len(conv.history) / 1024:.2f}"
             
             session.add(conv)
