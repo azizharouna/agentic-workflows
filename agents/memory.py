@@ -1,6 +1,7 @@
 import json
-from sqlalchemy import create_engine, Column, String, Text, DateTime, func
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, String, Text, DateTime, func
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 from datetime import datetime
 from typing import List, Dict
 import os
@@ -24,9 +25,9 @@ class AgentMemory:
         self.max_sessions = max_sessions
         self.max_storage_mb = max_storage_mb
         self.db_path = "agent_memory.db"
-        self.engine = create_engine(f"sqlite:///{self.db_path}")
-        Session = sessionmaker(bind=self.engine)
-        self.db = Session()
+        self.engine = create_async_engine(f"sqlite+aiosqlite:///{self.db_path}")
+        self.async_session = async_sessionmaker(self.engine)
+        self.db = self.async_session()
         Base.metadata.create_all(self.engine)
 
     def get_context(self) -> str:
@@ -63,22 +64,23 @@ class AgentMemory:
         self.db.commit()
 
     async def add_message(self, role: str, content: str):
-        conv = await self.db.get(Conversation, self.session_id) or Conversation(
-            session_id=self.session_id,
-            history="[]"
-        )
-        
-        history = conv.get_history()
-        history.append({
-            "role": role,
-            "content": content,
-            "timestamp": str(datetime.now())
-        })
-        
-        conv.history = json.dumps(history)
-        conv.last_updated = datetime.utcnow()
-        conv.size_kb = f"{len(conv.history) / 1024:.2f}"
-        
-        self.db.add(conv)
-        await self.db.commit()
-        await self._prune_sessions()
+        async with self.async_session() as session:
+            conv = await session.get(Conversation, self.session_id) or Conversation(
+                session_id=self.session_id,
+                history="[]"
+            )
+            
+            history = conv.get_history()
+            history.append({
+                "role": role,
+                "content": content,
+                "timestamp": str(datetime.now())
+            })
+            
+            conv.history = json.dumps(history)
+            conv.last_updated = datetime.utcnow()
+            conv.size_kb = f"{len(conv.history) / 1024:.2f}"
+            
+            session.add(conv)
+            await session.commit()
+            await self._prune_sessions(session)
