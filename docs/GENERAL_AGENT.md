@@ -29,12 +29,16 @@ Main agent controller with these key methods:
    - Loads role configuration from YAML files
    - Example file: `personas/late_delivery_support_agent.yaml`
 
-2. **`execute(query, session_id)`**
-   - Processes user input with context
+2. **`execute(query, sender_role)`**
+   - Processes input which can be either:
+     - Raw string messages
+     - Structured `AgentResponse` objects
    - Handles:
+     - Automatic string conversion of inputs
      - Memory management
      - LLM query construction
      - Response formatting
+     - Story arc progression checks
 
 3. **`query_deepseek(prompt)`**
    - Rate-limited LLM API calls
@@ -57,3 +61,12 @@ Environment variables:
 - Automatic retries for network issues
 - Fallback responses with low confidence
 - Escalation path for critical failures
+- Input type conversion safety
+- Story arc trigger validation
+
+## YAML Integration
+The system now supports:
+- Scenario-based persona definitions
+- Story arc progression triggers
+- Centralized persona management via `PersonaManager`
+- Trait-based response modulation

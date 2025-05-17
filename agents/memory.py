@@ -123,11 +123,25 @@ class AgentMemory:
                 )
                 
                 history = conv.get_history()
-                history.append({
-                    "role": role,
-                    "content": content,
-                    "timestamp": str(datetime.now())
-                })
+                # Handle AgentResponse objects
+                if hasattr(content, 'response'):
+                    serialized = {
+                        "role": role,
+                        "content": content.response,
+                        "metadata": {
+                            "confidence": content.confidence,
+                            "action": content.action,
+                            "emotion": content.emotion
+                        },
+                        "timestamp": str(datetime.now())
+                    }
+                else:
+                    serialized = {
+                        "role": role,
+                        "content": str(content),
+                        "timestamp": str(datetime.now())
+                    }
+                history.append(serialized)
                 
                 conv.history = json.dumps(history)
                 conv.last_updated = datetime.utcnow()
